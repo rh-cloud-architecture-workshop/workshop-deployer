@@ -1,0 +1,34 @@
+<div class="container">
+  {{module.name}}
+</div>
+<div class="container">
+  {{module.description}}
+</div>
+<div class="container">
+  {{module.primaryTags}} {{module.secondaryTags}}
+</div>
+<div class="container">
+  <div *ngIf="module.deleting">
+  Deployed: {{module.deployed}} (Deleting)
+  </div>
+  <div *ngIf="!module.deleting">
+    Deployed: {{module.deployed}}
+  </div>
+</div>
+<div class="container">
+  Sync Status: {{module.status}}
+</div>
+<div class="container">
+  Health: {{module.health}}
+</div>
+<div class="container">
+  <div *ngIf="!module.deployed">
+    <button (click)="deployApplication(module.application)"  type="button" class="btn btn-sm btn-secondary float-start" [disabled]="module.deleting">Deploy</button>
+  </div>
+  <div *ngIf="module.deployed">
+    <button (click)="undeployApplication(module.application)"  type="button" class="btn btn-sm btn-secondary float-start" [disabled]="module.deleting">Undeploy</button>
+  </div>
+</div>
+  <div class="container">
+  <p>&nbsp;</p>
+</div>

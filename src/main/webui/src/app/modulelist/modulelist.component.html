@@ -1,0 +1,4 @@
+<div class="container">
+  <app-module *ngFor="let module of modulelist.modules" [module]="module" (messageEvent)="receiveMessage($event)">
+  </app-module>
+</div>
