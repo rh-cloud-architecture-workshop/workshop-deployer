@@ -41,13 +41,19 @@ public class WorkshopDeployer {
 
     private String namespace;
 
+    private String allowedModulesCount;
+
     private String openShiftDomain;
 
     void onStart(@Observes StartupEvent ev) {
         LOGGER.info("Loading configmaps...");
         namespace = System.getenv("NAMESPACE");
+        allowedModulesCount = System.getenv("ALLOWED_MODULES_COUNT");
         if (namespace == null || namespace.isBlank()) {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
+        }
+        if (allowedModulesCount == null || !allowedModulesCount.matches("-?\\d+")) {
+            throw new RuntimeException("Environment variable 'ALLOWED_MODULES_COUNT' for namespace is either not set or is NaN.");
         }
         String configmap = System.getenv().getOrDefault("CONFIGMAP_MODULES", "workshop-modules");
         ConfigMap cmModules = client.configMaps().inNamespace(namespace).withName(configmap).get();
@@ -123,6 +129,13 @@ public class WorkshopDeployer {
                     LOGGER.error("Exception while getting modules for user " + user, throwable);
                     return Response.serverError().build();
                 });
+    }
+
+    @GET
+    @Path("/allowedModulesCount")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String getAllowedModulesCount() {
+        return allowedModulesCount;
     }
 
     @POST

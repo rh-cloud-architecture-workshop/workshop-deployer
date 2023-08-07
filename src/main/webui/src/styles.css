@@ -1,4 +1,30 @@
 /* You can add global styles to this file, and also import other style files */
+body {
+  font-family: 'Red Hat Display', sans-serif;
+  font-size: larger;
+}
+
+h1,h2,h3,h4,h5,h6 {
+    font-family: 'Red Hat Display', sans-serif;
+
+}
+p {
+    font-family: 'Red Hat Display', sans-serif;
+}
+div {
+  font-family: 'Red Hat Display', sans-serif;
+}
+span {
+  font-family: 'Red Hat Display', sans-serif;
+}
+.rh-font {
+  font-family: 'Red Hat Display', sans-serif;
+}
+.logo {
+  width: 150px;
+  padding-right: 10px;
+}
+
 
 .tab-content {
   border-left: 1px solid #ddd;
@@ -162,3 +188,7 @@ body {
   padding: 0 20px;
 }
 
+
+.pointer {
+  cursor: pointer;
+}

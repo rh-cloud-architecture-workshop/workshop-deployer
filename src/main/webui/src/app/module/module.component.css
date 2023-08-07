@@ -1,0 +1,18 @@
+.modulelist-wrapper {
+  position: relative;
+  padding-bottom: 50px;
+}
+
+.modulelist-wrapper .bottom {
+  position: absolute;
+  bottom: 0px;
+  margin-bottom: 10px;
+}
+
+
+.btn-disabled {
+  color: var(--bs-btn-disabled-color);
+  background-color: var(--bs-btn-disabled-bg);
+  border-color: var(--bs-btn-disabled-border-color);
+  opacity: var(--bs-btn-disabled-opacity);
+}

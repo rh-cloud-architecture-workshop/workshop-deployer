@@ -1,34 +1,68 @@
-<div class="container">
-  {{module.name}}
-</div>
-<div class="container">
-  {{module.description}}
-</div>
-<div class="container">
-  {{module.primaryTags}} {{module.secondaryTags}}
-</div>
-<div class="container">
-  <div *ngIf="module.deleting">
-  Deployed: {{module.deployed}} (Deleting)
+<div class="card mb-3"
+          [ngClass]="{
+            'border-success': module.deployed && module.health=='Healthy',
+            'border-warning': (module.deployed && !module.deleting && module.health!='Healthy'),
+            'border-danger': (module.deployed && module.deleting && module.health!='Healthy')
+          }">
+
+  <div class="card-body modulelist-wrapper">
+    <h5 class="card-title " [ngClass]="{
+      'text-success ': module.deployed && module.health=='Healthy',
+      'text-warning': (module.deployed && !module.deleting && module.health!='Healthy'),
+      'text-danger ': (module.deployed && module.deleting && module.health!='Healthy')
+        }">
+        {{module.name}}
+      </h5>
+
+    <small *ngFor="let tag of module.secondaryTags"><i>{{tag}} &nbsp;</i></small>
+
+    <p class="card-text">
+      {{module.description}}
+    </p>
+    <div>
+      <small class="text-muted badge rounded-pill bg-light filter-tag" *ngFor="let tag of module.primaryTags">{{tag}} </small> <br>
+    </div>
+    <div class="container-fluid bottom p-0" style="width: 90%;">
+      <div class="row">
+        <div class="col-2">
+          <a  href="/{{module.application}}/intro.doc" target="_application">Intro</a>
+
+        </div>
+        <div class="col-3">
+          <a href="/{{module.application}}/instructions.doc" target="_application">Instructions</a>
+        </div>
+        <div class="col">
+          <div *ngIf="maxModulesReached && !module.deployed" class=" float-end">
+            <button type="button" class="btn btn-sm btn-secondary btn-disabled" (click)="sendAlert('MAX_MODULES_DEPLOYED')"><i class="fa fa-plus-circle fa-lg"></i>&nbsp;Deploy &nbsp;</button>&nbsp;
+            <i class="fa fa-question-circle text-warning" (click)="sendAlert('MAX_MODULES_DEPLOYED')" ></i>
+          </div>
+          <div *ngIf="!module.deployed && !maxModulesReached" class=" float-end">
+            <button (click)="deployApplication(module.application)" type="button" class="btn btn-sm btn-secondary "
+              [disabled]="module.deleting"><i class="fa fa-plus-circle fa-lg"></i>&nbsp;Deploy</button>
+          </div>
+          <div *ngIf="module.deployed" class=" float-end">
+            <button (click)="undeployApplication(module.application)" type="button" class="btn btn-sm btn-secondary"
+              [disabled]="module.deleting"><i class="fa fa-minus-circle fa-lg"></i>&nbsp;&nbsp;Undeploy</button>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
   </div>
-  <div *ngIf="!module.deleting">
-    Deployed: {{module.deployed}}
+  <div class="card-footer "
+      [ngClass]="{
+        'bg-success text-white': module.deployed && module.health=='Healthy',
+        'bg-warning': (module.deployed && !module.deleting && module.health!='Healthy'),
+        'bg-danger  text-light': (module.deployed && module.deleting && module.health!='Healthy')
+      }"
+    >
+
+    <span class="float-left" *ngIf="module.deleting"> Deployed: {{module.deployed}} (Deleting) </span>
+    <span class="float-left" *ngIf="!module.deleting"> Deployed: {{module.deployed}} </span>
+    <span class="float-left" *ngIf="module.deployed">&nbsp; | &nbsp; Sync Status: {{module.status}}&nbsp; | &nbsp;</span>
+    <span class="float-left" *ngIf="module.deployed">Health: {{module.health}}</span>
   </div>
-</div>
-<div class="container">
-  Sync Status: {{module.status}}
-</div>
-<div class="container">
-  Health: {{module.health}}
-</div>
-<div class="container">
-  <div *ngIf="!module.deployed">
-    <button (click)="deployApplication(module.application)"  type="button" class="btn btn-sm btn-secondary float-start" [disabled]="module.deleting">Deploy</button>
-  </div>
-  <div *ngIf="module.deployed">
-    <button (click)="undeployApplication(module.application)"  type="button" class="btn btn-sm btn-secondary float-start" [disabled]="module.deleting">Undeploy</button>
-  </div>
-</div>
-  <div class="container">
-  <p>&nbsp;</p>
 </div>

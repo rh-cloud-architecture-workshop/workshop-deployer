@@ -10,5 +10,5 @@ export class HomeComponent  {
   constructor() { }
 
   pageViewType = 'homePage';
-
+  showDetails = false;
 }
