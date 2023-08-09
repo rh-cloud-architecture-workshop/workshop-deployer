@@ -21,8 +21,7 @@ export class ModuleListComponent implements OnInit {
   router: Router
   interval:any;
   showFilterCard:boolean = true;
-  maxModulesReached: false;
-  maxModulesAllowed;
+  globalConfig;
 
   //warning messages
   alertMessages = {
@@ -41,6 +40,7 @@ export class ModuleListComponent implements OnInit {
   ngOnInit(): void {
     if (this.testBrowser) {
       this.fetchModuleList();
+      this.getGlobalConfig();
       this.interval = setInterval(()=>{
         this.fetchModuleList();
       },10000);
@@ -54,10 +54,11 @@ export class ModuleListComponent implements OnInit {
     });
   }
 
-  getAllowedModulesCount() {
-    this.moduleService.getAllowedModulesCount().subscribe(maxModulesAllowed => {
-      console.log("getAllowedModulesCount", maxModulesAllowed)
-      this.maxModulesAllowed = maxModulesAllowed;
+  getGlobalConfig() {
+    this.moduleService.getGlobalConfig().subscribe(globalConfig => {
+      console.log("globalConfig", globalConfig)
+      this.globalConfig  = globalConfig;
+
     });
   }
 

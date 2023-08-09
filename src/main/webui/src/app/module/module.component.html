@@ -25,11 +25,11 @@
     <div class="container-fluid bottom p-0" style="width: 90%;">
       <div class="row">
         <div class="col-2">
-          <a  href="/{{module.application}}/intro.doc" target="_application">Intro</a>
+          <a  href="{{globalConfig['BOOKBAG_URL_ROOT']}}/{{module.application}}.doc" target="_application">Intro</a>&nbsp;
 
         </div>
-        <div class="col-3">
-          <a href="/{{module.application}}/instructions.doc" target="_application">Instructions</a>
+        <div class="col">
+          <a href="{{globalConfig['BOOKBAG_URL_ROOT']}}/{{module.application}}-instructions.doc" target="_application">Instructions</a>&nbsp;
         </div>
         <div class="col">
           <div *ngIf="maxModulesReached && !module.deployed" class=" float-end">

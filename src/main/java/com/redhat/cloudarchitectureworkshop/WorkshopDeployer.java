@@ -44,16 +44,22 @@ public class WorkshopDeployer {
     private String allowedModulesCount;
 
     private String openShiftDomain;
+    
+    private String bookBagURL;
 
     void onStart(@Observes StartupEvent ev) {
         LOGGER.info("Loading configmaps...");
         namespace = System.getenv("NAMESPACE");
         allowedModulesCount = System.getenv("ALLOWED_MODULES_COUNT");
+        bookBagURL = System.getenv("BOOKBAG_URL_ROOT");
         if (namespace == null || namespace.isBlank()) {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
         }
         if (allowedModulesCount == null || !allowedModulesCount.matches("-?\\d+")) {
             throw new RuntimeException("Environment variable 'ALLOWED_MODULES_COUNT' for namespace is either not set or is NaN.");
+        }
+        if (bookBagURL == null ) {
+            throw new RuntimeException("Environment variable 'bookBagURL' for namespace is not set.");
         }
         String configmap = System.getenv().getOrDefault("CONFIGMAP_MODULES", "workshop-modules");
         ConfigMap cmModules = client.configMaps().inNamespace(namespace).withName(configmap).get();
@@ -132,10 +138,27 @@ public class WorkshopDeployer {
     }
 
     @GET
-    @Path("/allowedModulesCount")
+    @Path("/getGlobalConfig")
     @Produces(MediaType.APPLICATION_JSON)
-    public String getAllowedModulesCount() {
-        return allowedModulesCount;
+    public Uni<Response>  getConfigDetails() {
+        JsonObject module = new JsonObject();
+        module.put("ALLOWED_MODULES_COUNT", allowedModulesCount);
+        module.put("BOOKBAG_URL_ROOT", bookBagURL);
+        
+        
+        return Uni.createFrom().voidItem().emitOn(Infrastructure.getDefaultWorkerPool())
+                .onItem().transform(catalogList -> module)
+                .onItem().transform(catalogList -> {
+                    if (catalogList == null) {
+                        return Response.status(Response.Status.NOT_FOUND).build();
+                    } else {
+                        return Response.ok(catalogList).build();
+                    }
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    LOGGER.error("Exception while fetching category list", throwable);
+                    return Response.serverError().build();
+                });          
     }
 
     @POST

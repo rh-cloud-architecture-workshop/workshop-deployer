@@ -11,7 +11,7 @@ export class ModuleService {
   private handleError: HandleError;
 
   moduleListUrl = '/api/modules';
-  moduleCountUrl = '/api/allowedModulesCount';
+  globalConfigUrl = '/api/getGlobalConfig';
   deployApplicationUrl = "/api/deploy";
   undeployApplicationUrl = "/api/undeploy"
 
@@ -45,10 +45,10 @@ export class ModuleService {
       .pipe(catchError(this.handleError('undeployApplication', {status: 'error'})));
   }
 
-  getAllowedModulesCount(): Observable<any> {
-    return this.http.get<any>(this.moduleCountUrl)
+  getGlobalConfig(): Observable<any> {
+    return this.http.get<any>(this.globalConfigUrl)
       .pipe(
-        catchError(this.handleError('getAllowedModulesCount', ''))
+        catchError(this.handleError('getGlobalConfig', ''))
       );
   }
 

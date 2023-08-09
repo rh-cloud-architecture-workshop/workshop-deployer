@@ -15,6 +15,7 @@ export class ModuleComponent {
 
   @Input() module:Module;
   @Input() maxModulesReached:boolean = false;
+  @Input() globalConfig:Map<String, String>;
 
   @Output() messageEvent = new EventEmitter<string>();
   @Output() alertEvent = new EventEmitter<string>();
