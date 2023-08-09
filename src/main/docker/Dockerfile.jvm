@@ -7,7 +7,7 @@
 #
 # Then, build the image with:
 #
-# docker build -f src/main/docker/Dockerfile.jvm -t quay.io/jbaskara/workshop-deployer .
+# docker build -f src/main/docker/Dockerfile.jvm -t quay.io/cloud-architecture-workshop/workshop-deployer .
 #
 # Then run the container using:
 #
