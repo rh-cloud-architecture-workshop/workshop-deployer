@@ -4,7 +4,6 @@ package com.redhat.cloudarchitectureworkshop;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.client.dsl.base.ResourceDefinitionContext;
-import io.fabric8.openshift.api.model.Route;
 import io.fabric8.openshift.client.OpenShiftClient;
 import io.quarkus.runtime.StartupEvent;
 import io.smallrye.mutiny.Uni;
@@ -26,8 +25,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Path("/api")
 public class WorkshopDeployer {
@@ -52,6 +49,7 @@ public class WorkshopDeployer {
         namespace = System.getenv("NAMESPACE");
         allowedModulesCount = System.getenv("ALLOWED_MODULES_COUNT");
         bookBagNamespace = System.getenv("BOOKBAG_NAMESPACE");
+        openShiftDomain = System.getenv("OPENSHIFT_DOMAIN");
         if (namespace == null || namespace.isBlank()) {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
         }
@@ -60,6 +58,9 @@ public class WorkshopDeployer {
         }
         if (bookBagNamespace == null ) {
             throw new RuntimeException("Environment variable 'bookBagNamespace' for namespace is not set.");
+        }
+        if (openShiftDomain == null ) {
+            throw new RuntimeException("Environment variable 'openShiftDomain' for namespace is not set.");
         }
         String configmap = System.getenv().getOrDefault("CONFIGMAP_MODULES", "workshop-modules");
         ConfigMap cmModules = client.configMaps().inNamespace(namespace).withName(configmap).get();
@@ -84,8 +85,6 @@ public class WorkshopDeployer {
                 LOGGER.info("Loaded application for " + applicationName);
             }
         });
-
-        openShiftDomain = getOpenShiftDomain();
     }
 
     @GET
@@ -275,22 +274,6 @@ public class WorkshopDeployer {
         } catch (Exception e) {
             LOGGER.error("Exception while listing Applications for user " + user, e);
             return new ArrayList<>();
-        }
-    }
-
-    private String getOpenShiftDomain() {
-        List<Route> routes = client.routes().inNamespace(namespace).list().getItems();
-        if (routes.isEmpty()) {
-            throw new RuntimeException("No routes found in namespace " + namespace);
-        }
-        String host = routes.get(0).getSpec().getHost();
-        Pattern pattern = Pattern.compile(".*\\.(apps\\..*)");
-        Matcher matcher = pattern.matcher(host);
-        if (matcher.find())
-        {
-            return matcher.group(1);
-        } else {
-            throw new RuntimeException("Can't extract domain form host " + host);
         }
     }
 }
