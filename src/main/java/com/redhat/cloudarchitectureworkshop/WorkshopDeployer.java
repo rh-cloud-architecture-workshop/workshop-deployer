@@ -45,21 +45,21 @@ public class WorkshopDeployer {
 
     private String openShiftDomain;
     
-    private String bookBagURL;
+    private String bookBagNamespace;
 
     void onStart(@Observes StartupEvent ev) {
         LOGGER.info("Loading configmaps...");
         namespace = System.getenv("NAMESPACE");
         allowedModulesCount = System.getenv("ALLOWED_MODULES_COUNT");
-        bookBagURL = System.getenv("BOOKBAG_URL_ROOT");
+        bookBagNamespace = System.getenv("BOOKBAG_NAMESPACE");
         if (namespace == null || namespace.isBlank()) {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
         }
         if (allowedModulesCount == null || !allowedModulesCount.matches("-?\\d+")) {
             throw new RuntimeException("Environment variable 'ALLOWED_MODULES_COUNT' for namespace is either not set or is NaN.");
         }
-        if (bookBagURL == null ) {
-            throw new RuntimeException("Environment variable 'bookBagURL' for namespace is not set.");
+        if (bookBagNamespace == null ) {
+            throw new RuntimeException("Environment variable 'bookBagNamespace' for namespace is not set.");
         }
         String configmap = System.getenv().getOrDefault("CONFIGMAP_MODULES", "workshop-modules");
         ConfigMap cmModules = client.configMaps().inNamespace(namespace).withName(configmap).get();
@@ -144,7 +144,7 @@ public class WorkshopDeployer {
         String user = getUser(headers);
         JsonObject module = new JsonObject();
         module.put("ALLOWED_MODULES_COUNT", allowedModulesCount);
-        module.put("BOOKBAG_URL_ROOT", "https://bookbag-" + user + "." + openShiftDomain + "/workshop");
+        module.put("BOOKBAG_URL", "https://" + bookBagNamespace  + "-" + user + "." + openShiftDomain + "/workshop");
         module.put("USER", user);
         
         
