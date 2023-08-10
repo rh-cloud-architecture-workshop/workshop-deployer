@@ -196,8 +196,7 @@ public class WorkshopDeployer {
                     LOGGER.info("Deploying application '" + application + "' for user '" + user + "'");
                     String applicationDef = ((JsonObject)module.get()).getString("application");
 
-                    applicationDef = applicationDef.replaceAll("\\{\\{ __user }}", user)
-                            .replaceAll("\\{\\{ r_openshift_subdomain }}", openShiftDomain);
+                    applicationDef = applicationDef.replaceAll("\\{\\{ __user }}", user);
                     InputStream inputStream = new ByteArrayInputStream(applicationDef.getBytes());
                     GenericKubernetesResource newResource = client.genericKubernetesResources(context)
                             .inNamespace("globex-gitops-" + user).load(inputStream).create();
