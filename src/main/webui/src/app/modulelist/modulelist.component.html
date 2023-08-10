@@ -1,4 +1,55 @@
-<div class="container">
-  <app-module *ngFor="let module of modulelist.modules" [module]="module" (messageEvent)="receiveMessage($event)">
-  </app-module>
+<div class="container-fluid pb-2 pt-2" *ngIf="globalConfig && (getDeployedModules().length >= globalConfig.ALLOWED_MODULES_COUNT) && currentAlert">
+  <div class="p-3 mb-2 bg-warning text-dark" >
+    <i class="fa fa-{{currentAlert.type}} text-{{currentAlert.type}}>"></i> {{currentAlert.text}}
+    <div class="bd-clipboard"><i (click)="currentAlert=null" class="fa fa-close pointer" title="Close" data-bs-original-title="Close"></i></div>
+  </div>
+</div>
+<div class="container-fluid">
+  <div class="row">
+
+    <!--Left column with filters-->
+    <div class="col-2">
+      <div class="card" *ngIf="showFilterCard">
+        <div class="card-body">
+          <div class="form-check form-switch mt-4">
+            <input class="form-check-input" type="checkbox" role="switch" [(ngModel)]="filterDeployedModules" id="flexSwitchCheckDefault" >
+            <label class="form-check-label pointer" for="flexSwitchCheckDefault">View deployed modules  ({{getDeployedModules().length}}) </label>
+          </div>
+
+          <span class="orSeparator"><span>OR</span></span>
+
+          <div>
+            <h6 class="float-start"> <strong> Filter By Tags: </strong> </h6>
+            <span class="badge bg-light text-dark float-end pointer" title="clear all filters" (click)="resetFilterTags();" *ngIf="this.filterTagsCount() > 0">
+            clear
+            </span>
+            <br>
+
+            <div *ngFor="let tag of uniqueModuleTags">
+              <h6>
+                <span class="badge displayFlex rounded-pill pointer me-1 mt-1"  (click)="toggleTag(tag);" [ngClass]="{'bg-secondary': tag.status,'white-pill': !tag.status}">
+                  {{tag.name}}
+                </span>
+              </h6>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--Left column with filters: end-->
+
+    <!--Right column with modules card-->
+
+    <div class="col-10">
+      <div class="row m-0">
+        <app-module class="col-4 d-flex align-items-stretch" *ngFor="let module of getFilteredModules()"
+          [module]="module" (messageEvent)="receiveMessage($event)" (alertEvent)="showAlert($event)" [globalConfig]="globalConfig" [maxModulesReached] = "getDeployedModules().length >= globalConfig.ALLOWED_MODULES_COUNT">
+        </app-module>
+      </div>
+    </div>
+
+  </div>
+  <!--Right column with modules card: end-->
+
+
 </div>

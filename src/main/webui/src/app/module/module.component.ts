@@ -14,8 +14,11 @@ export class ModuleComponent {
   moduleService: ModuleService;
 
   @Input() module:Module;
+  @Input() maxModulesReached:boolean = false;
+  @Input() globalConfig:Map<String, String>;
 
   @Output() messageEvent = new EventEmitter<string>();
+  @Output() alertEvent = new EventEmitter<string>();
 
   constructor(moduleService: ModuleService) {
     this.moduleService = moduleService;
@@ -35,7 +38,8 @@ export class ModuleComponent {
   }
 
   undeployApplication(application: string) {
-     this.moduleService.undeployApplication(application)
+    if(confirm("Click OK to confirm, and Cancel to exit. This is action irreversible.")) {
+      this.moduleService.undeployApplication(application)
        .subscribe(response => {
           console.log(response);
           if (response.status == 'ok') {
@@ -45,10 +49,15 @@ export class ModuleComponent {
             this.module.status = response.application.status;
           }
        });
+    }
   }
 
   sendMessage(message: string) {
     this.messageEvent.emit(message)
+  }
+
+  sendAlert(alert: string) {
+    this.alertEvent.emit(alert)
   }
 
 }

@@ -1,5 +1,28 @@
-<div class="container">
-  <h2>Workshop Deployer</h2>
+<div class="container-fluid mb-2 mt-2">
+  <div class="card">
+    <div class="card-body">
+      <img src="/assets/redhat.png" class="logo float-start">
+      <h3 class="float-start pointer" (click)="showDetails=!showDetails">Cloud Native Architecture Workshop: Deploy your adventure </h3>
+      <i class="fa fa-angle-down rotate-icon float-end pointer" *ngIf="!showDetails" (click)="showDetails=true">&nbsp;<span>Read Details</span></i>
+      <i class="fa fa-angle-up rotate-icon float-end pointer" *ngIf="showDetails"  (click)="showDetails=false">&nbsp;<span>Hide Details</span></i>
+      <br><br>
+      <div *ngIf="showDetails">
+      <p>This workshop consists of a number different modules, each highlighting a particular use case, development principle or technology. The modules have a common overarching story, revolving around the e-commerce site of a fictitious retail company (Globex).
+      Globex has undergone significant modernization and they are keen to build on their application modernization efforts to rapidly build new functionalities.
+      </p>
+      <p>
+        The modules are independent from each other and can be taken in any combination or order.
+        Each module consists of an <strong>introduction</strong> and an <strong>instructions</strong> section.
+        The introduction details the business problem we are trying to solve, possible solutions, a technical overview of the proposed solution and other background information.
+        The instructions provide details step-by-step details to guide you through the workshop.
+      </p>
+      <p>
+        Modules are provisioned on demand by you. You choose your adventure! Click on the <strong>Deploy</strong> button to setup a particular module.
+        It will take a few minutes for the module to be fully deployed. You can read through the Introductions while you wait for the module to be fully deplpyed. The module turns green when it is ready for use.
+      </p>
+    </div>
+    </div>
+  </div>
 </div>
-<router-outlet></router-outlet>
+
 <app-modulelist></app-modulelist>

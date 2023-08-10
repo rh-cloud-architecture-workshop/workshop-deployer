@@ -38,11 +38,29 @@ public class WorkshopDeployer {
 
     private String namespace;
 
+    private String allowedModulesCount;
+
+    private String openShiftDomain;
+    
+    private String bookBagNamespace;
+
     void onStart(@Observes StartupEvent ev) {
         LOGGER.info("Loading configmaps...");
         namespace = System.getenv("NAMESPACE");
+        allowedModulesCount = System.getenv("ALLOWED_MODULES_COUNT");
+        bookBagNamespace = System.getenv("BOOKBAG_NAMESPACE");
+        openShiftDomain = System.getenv("OPENSHIFT_DOMAIN");
         if (namespace == null || namespace.isBlank()) {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
+        }
+        if (allowedModulesCount == null || !allowedModulesCount.matches("-?\\d+")) {
+            throw new RuntimeException("Environment variable 'ALLOWED_MODULES_COUNT' for namespace is either not set or is NaN.");
+        }
+        if (bookBagNamespace == null ) {
+            throw new RuntimeException("Environment variable 'bookBagNamespace' for namespace is not set.");
+        }
+        if (openShiftDomain == null ) {
+            throw new RuntimeException("Environment variable 'openShiftDomain' for namespace is not set.");
         }
         String configmap = System.getenv().getOrDefault("CONFIGMAP_MODULES", "workshop-modules");
         ConfigMap cmModules = client.configMaps().inNamespace(namespace).withName(configmap).get();
@@ -116,6 +134,32 @@ public class WorkshopDeployer {
                     LOGGER.error("Exception while getting modules for user " + user, throwable);
                     return Response.serverError().build();
                 });
+    }
+
+    @GET
+    @Path("/getGlobalConfig")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<Response>  getGlobalConfig(@Context HttpHeaders headers) {
+        String user = getUser(headers);
+        JsonObject module = new JsonObject();
+        module.put("ALLOWED_MODULES_COUNT", allowedModulesCount);
+        module.put("BOOKBAG_URL", "https://" + bookBagNamespace  + "-" + user + "." + openShiftDomain + "/workshop");
+        module.put("USER", user);
+        
+        
+        return Uni.createFrom().voidItem().emitOn(Infrastructure.getDefaultWorkerPool())
+                .onItem().transform(returnModule -> module)
+                .onItem().transform(returnModule -> {
+                    if (returnModule == null) {
+                        return Response.status(Response.Status.NOT_FOUND).build();
+                    } else {
+                        return Response.ok(returnModule).build();
+                    }
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    LOGGER.error("Exception while getting Gloval Config", throwable);
+                    return Response.serverError().build();
+                });          
     }
 
     @POST

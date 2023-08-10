@@ -11,6 +11,7 @@ export class ModuleService {
   private handleError: HandleError;
 
   moduleListUrl = '/api/modules';
+  globalConfigUrl = '/api/getGlobalConfig';
   deployApplicationUrl = "/api/deploy";
   undeployApplicationUrl = "/api/undeploy"
 
@@ -22,7 +23,7 @@ export class ModuleService {
   fetchModuleList(): Observable<any> {
     return this.http.get<any>(this.moduleListUrl)
       .pipe(
-        catchError(this.handleError('fetchPaginatedProductsList', ''))
+        catchError(this.handleError('fetchModuleList', ''))
       );
   }
 
@@ -43,4 +44,12 @@ export class ModuleService {
       .pipe(map(response => response))
       .pipe(catchError(this.handleError('undeployApplication', {status: 'error'})));
   }
+
+  getGlobalConfig(): Observable<any> {
+    return this.http.get<any>(this.globalConfigUrl)
+      .pipe(
+        catchError(this.handleError('getGlobalConfig', ''))
+      );
+  }
+
 }
