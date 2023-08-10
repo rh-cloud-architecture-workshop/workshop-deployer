@@ -140,23 +140,25 @@ public class WorkshopDeployer {
     @GET
     @Path("/getGlobalConfig")
     @Produces(MediaType.APPLICATION_JSON)
-    public Uni<Response>  getConfigDetails() {
+    public Uni<Response>  getGlobalConfig(@Context HttpHeaders headers) {
+        String user = getUser(headers);
         JsonObject module = new JsonObject();
         module.put("ALLOWED_MODULES_COUNT", allowedModulesCount);
-        module.put("BOOKBAG_URL_ROOT", bookBagURL);
+        module.put("BOOKBAG_URL_ROOT", "https://bookbag-" + user + "." + openShiftDomain + "/workshop");
+        module.put("USER", user);
         
         
         return Uni.createFrom().voidItem().emitOn(Infrastructure.getDefaultWorkerPool())
-                .onItem().transform(catalogList -> module)
-                .onItem().transform(catalogList -> {
-                    if (catalogList == null) {
+                .onItem().transform(returnModule -> module)
+                .onItem().transform(returnModule -> {
+                    if (returnModule == null) {
                         return Response.status(Response.Status.NOT_FOUND).build();
                     } else {
-                        return Response.ok(catalogList).build();
+                        return Response.ok(returnModule).build();
                     }
                 })
                 .onFailure().recoverWithItem(throwable -> {
-                    LOGGER.error("Exception while fetching category list", throwable);
+                    LOGGER.error("Exception while getting Gloval Config", throwable);
                     return Response.serverError().build();
                 });          
     }

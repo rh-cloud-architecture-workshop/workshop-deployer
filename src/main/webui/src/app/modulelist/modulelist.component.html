@@ -1,7 +1,7 @@
 <div class="container-fluid pb-2 pt-2" *ngIf="(getDeployedModules().length >= globalConfig.ALLOWED_MODULES_COUNT) && currentAlert">
   <div class="p-3 mb-2 bg-warning text-dark" >
     <i class="fa fa-{{currentAlert.type}} text-{{currentAlert.type}}>"></i> {{currentAlert.text}}
-    <div class="bd-clipboard"><small (click)="currentAlert=null" class="pointer" title="Close" data-bs-original-title="Close">[Close]</small></div>
+    <div class="bd-clipboard"><i (click)="currentAlert=null" class="fa fa-close pointer" title="Close" data-bs-original-title="Close"></i></div>
   </div>
 </div>
 <div class="container-fluid">
