@@ -3,6 +3,9 @@ package com.redhat.cloudarchitectureworkshop;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
+import io.fabric8.kubernetes.api.model.Namespace;
+import io.fabric8.kubernetes.api.model.NamespaceBuilder;
+import io.fabric8.kubernetes.api.model.rbac.*;
 import io.fabric8.kubernetes.client.dsl.base.ResourceDefinitionContext;
 import io.fabric8.openshift.client.OpenShiftClient;
 import io.quarkus.runtime.StartupEvent;
@@ -44,12 +47,18 @@ public class WorkshopDeployer {
     
     private String bookBagNamespace;
 
+    private String argoApplicationNamespace;
+
+    private String argoApplicationName;
+
     void onStart(@Observes StartupEvent ev) {
         LOGGER.info("Loading configmaps...");
         namespace = System.getenv("NAMESPACE");
         allowedModulesCount = System.getenv("ALLOWED_MODULES_COUNT");
         bookBagNamespace = System.getenv("BOOKBAG_NAMESPACE");
         openShiftDomain = System.getenv("OPENSHIFT_DOMAIN");
+        argoApplicationNamespace = System.getenv("ARGO_NAMESPACE_PREFIX");
+        argoApplicationName = System.getenv().getOrDefault("ARGO_NAME_PREFIX", "globex-gitops");
         if (namespace == null || namespace.isBlank()) {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
         }
@@ -178,6 +187,60 @@ public class WorkshopDeployer {
                         LOGGER.warn("Module for application '" + application + "' not found.");
                         return new JsonObject().put("status", "notchanged");
                     }
+
+                    // create namespaces for module
+                    JsonArray namespaces = ((JsonObject)module.get()).getJsonArray("namespaces");
+                    if (namespaces == null) {
+                        namespaces = new JsonArray();
+                    }
+                    namespaces.stream().map(o -> ((String)o).replaceAll("\\{\\{ __user }}", user)).forEach(namespaceName -> {
+                        // create namespace
+                        Namespace namespace = client.namespaces().withName(namespaceName).get();
+                        if (namespace != null) {
+                            LOGGER.warn("Namespace " + namespaceName + " already exists");
+                        } else {
+                            namespace = new NamespaceBuilder().withNewMetadata().withName(namespaceName)
+                                    .addToLabels("argocd.argoproj.io/managed-by", argoApplicationNamespace + "-" + user).endMetadata().build();
+                            client.resource(namespace).create();
+                            LOGGER.info("Namespace " + namespaceName + " created");
+                        }
+                        // give user admin rights to namespace
+                        String userRoleBindingName = user + "-admin-" + namespaceName;
+                        RoleBinding userRoleBinding = client.rbac().roleBindings().inNamespace(namespaceName).withName(userRoleBindingName).get();
+                        if (userRoleBinding != null) {
+                            LOGGER.warn("RoleBinding " + userRoleBindingName + " already exists");
+                        } else {
+                            userRoleBinding = new RoleBindingBuilder().withNewMetadata().withName(userRoleBindingName)
+                                    .withNamespace(namespaceName).endMetadata()
+                                    .addToSubjects(new SubjectBuilder().withKind("User").withName(user).withNamespace(namespaceName).build())
+                                    .withRoleRef(new RoleRefBuilder().withKind("ClusterRole").withName("admin").withApiGroup("rbac.authorization.k8s.io").build())
+                                    .build();
+                            client.resource(userRoleBinding).create();
+                            LOGGER.info("RoleBinding " + userRoleBindingName + " created");
+                        }
+                        // give argocd service account admin rights to namespace
+                        String argoRoleBindingName = "argo-admin-" + namespaceName;
+                        RoleBinding argoRoleBinding = client.rbac().roleBindings().inNamespace(namespaceName).withName(argoRoleBindingName).get();
+                        if (argoRoleBinding != null) {
+                            LOGGER.warn("RoleBinding " + argoRoleBindingName + " already exists");
+                        } else {
+                            argoRoleBinding = new RoleBindingBuilder().withNewMetadata().withName(argoRoleBindingName)
+                                    .withNamespace(namespaceName).endMetadata()
+                                    .addToSubjects(new SubjectBuilder()
+                                            .withKind("ServiceAccount")
+                                            .withName(argoApplicationName + "-" + user + "-argocd-application-controller")
+                                            .withNamespace(argoApplicationNamespace + "-" + user).build())
+                                    .addToSubjects(new SubjectBuilder()
+                                            .withKind("ServiceAccount")
+                                            .withName(argoApplicationName + "-" + user + "-argocd-dex-server")
+                                            .withNamespace(argoApplicationNamespace + "-" + user).build())
+                                    .withRoleRef(new RoleRefBuilder().withKind("ClusterRole").withName("admin").withApiGroup("rbac.authorization.k8s.io").build())
+                                    .build();
+                            client.resource(argoRoleBinding).create();
+                            LOGGER.info("RoleBinding " + argoRoleBindingName + " created");
+                        }
+                    });
+
                     ResourceDefinitionContext context = new ResourceDefinitionContext.Builder()
                             .withGroup("argoproj.io")
                             .withVersion("v1alpha1")
@@ -236,6 +299,21 @@ public class WorkshopDeployer {
                     LOGGER.info("Undeploying application '" + application + "' for user '" + user + "'");
                     client.genericKubernetesResources(context)
                             .inNamespace("globex-gitops-" + user).withName(application).delete();
+                    // delete namespaces
+                    Optional<Object> module = modules.stream().filter(o -> {
+                        JsonObject m = (JsonObject) o;
+                        return m.getString("applicationName").equals(application);
+                    }).findFirst();
+                    if (module.isEmpty()) {
+                        LOGGER.warn("Module for application '" + application + "' not found.");
+                    } else {
+                        JsonArray namespaces = ((JsonObject) module.get()).getJsonArray("namespaces");
+                        if (namespaces == null) {
+                            namespaces = new JsonArray();
+                        }
+                        namespaces.stream().map(o -> ((String)o).replaceAll("\\{\\{ __user }}", user))
+                                .forEach(namespaceName -> client.namespaces().withName(namespaceName).delete());
+                    }
                     return new JsonObject().put("status", "ok")
                             .put("application", new JsonObject().put("deployed", true).put("deleting", true)
                             .put("status", "")
