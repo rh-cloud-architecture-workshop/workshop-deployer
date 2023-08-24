@@ -312,7 +312,10 @@ public class WorkshopDeployer {
                             namespaces = new JsonArray();
                         }
                         namespaces.stream().map(o -> ((String)o).replaceAll("\\{\\{ __user }}", user))
-                                .forEach(namespaceName -> client.namespaces().withName(namespaceName).delete());
+                                .forEach(namespaceName -> {
+                                    client.namespaces().withName(namespaceName).delete();
+                                    LOGGER.info("Namespace " + namespaceName + " deleted");
+                                });
                     }
                     return new JsonObject().put("status", "ok")
                             .put("application", new JsonObject().put("deployed", true).put("deleting", true)
