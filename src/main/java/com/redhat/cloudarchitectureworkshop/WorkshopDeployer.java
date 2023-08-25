@@ -6,6 +6,7 @@ import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.rbac.*;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.base.ResourceDefinitionContext;
 import io.fabric8.openshift.client.OpenShiftClient;
 import io.quarkus.runtime.StartupEvent;
@@ -25,9 +26,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Path("/api")
 public class WorkshopDeployer {
@@ -51,6 +57,12 @@ public class WorkshopDeployer {
 
     private String argoApplicationName;
 
+    private String maxTimeToWaitStr;
+
+    private String intervalStr;
+
+    private ScheduledExecutorService executorService;
+
     void onStart(@Observes StartupEvent ev) {
         LOGGER.info("Loading configmaps...");
         namespace = System.getenv("NAMESPACE");
@@ -59,6 +71,9 @@ public class WorkshopDeployer {
         openShiftDomain = System.getenv("OPENSHIFT_DOMAIN");
         argoApplicationNamespace = System.getenv("ARGO_NAMESPACE_PREFIX");
         argoApplicationName = System.getenv().getOrDefault("ARGO_NAME_PREFIX", "globex-gitops");
+        maxTimeToWaitStr = System.getenv().getOrDefault("DELETE_MAX_TIME_TO_WAIT_MS", "300000");
+        intervalStr = System.getenv().getOrDefault("INTERVAL", "3000");
+        executorService = Executors.newScheduledThreadPool(1);
         if (namespace == null || namespace.isBlank()) {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
         }
@@ -148,13 +163,12 @@ public class WorkshopDeployer {
     @GET
     @Path("/getGlobalConfig")
     @Produces(MediaType.APPLICATION_JSON)
-    public Uni<Response>  getGlobalConfig(@Context HttpHeaders headers) {
+    public Uni<Response> getGlobalConfig(@Context HttpHeaders headers) {
         String user = getUser(headers);
         JsonObject module = new JsonObject();
         module.put("ALLOWED_MODULES_COUNT", allowedModulesCount);
         module.put("BOOKBAG_URL", "https://" + bookBagNamespace  + "-" + user + "." + openShiftDomain + "/workshop");
         module.put("USER", user);
-        
         
         return Uni.createFrom().voidItem().emitOn(Infrastructure.getDefaultWorkerPool())
                 .onItem().transform(returnModule -> module)
@@ -166,7 +180,7 @@ public class WorkshopDeployer {
                     }
                 })
                 .onFailure().recoverWithItem(throwable -> {
-                    LOGGER.error("Exception while getting Gloval Config", throwable);
+                    LOGGER.error("Exception while getting Global Config", throwable);
                     return Response.serverError().build();
                 });          
     }
@@ -179,17 +193,14 @@ public class WorkshopDeployer {
         String application = new JsonObject(input).getString("application");
         return Uni.createFrom().voidItem().emitOn(Infrastructure.getDefaultWorkerPool())
                 .onItem().transform(v -> {
-                    Optional<Object> module = modules.stream().filter(o -> {
-                        JsonObject m = (JsonObject) o;
-                        return m.getString("applicationName").equals(application);
-                    }).findFirst();
+                    Optional<JsonObject> module = getModule(application);
                     if (module.isEmpty()) {
                         LOGGER.warn("Module for application '" + application + "' not found.");
                         return new JsonObject().put("status", "notchanged");
                     }
 
                     // create namespaces for module
-                    JsonArray namespaces = ((JsonObject)module.get()).getJsonArray("namespaces");
+                    JsonArray namespaces = module.get().getJsonArray("namespaces");
                     if (namespaces == null) {
                         namespaces = new JsonArray();
                     }
@@ -250,18 +261,18 @@ public class WorkshopDeployer {
                             .build();
 
                     GenericKubernetesResource resource = client.genericKubernetesResources(context)
-                            .inNamespace("globex-gitops-" + user).withName(application).get();
+                            .inNamespace(argoApplicationNamespace + "-" + user).withName(application).get();
                     if (resource != null) {
                         LOGGER.warn("Application '" + application + "' is already deployed for user '" + user + "'");
                         return new JsonObject().put("status", "notchanged");
                     }
                     LOGGER.info("Deploying application '" + application + "' for user '" + user + "'");
-                    String applicationDef = ((JsonObject)module.get()).getString("application");
+                    String applicationDef = module.get().getString("application");
 
                     applicationDef = applicationDef.replaceAll("\\{\\{ __user }}", user);
                     InputStream inputStream = new ByteArrayInputStream(applicationDef.getBytes());
                     GenericKubernetesResource newResource = client.genericKubernetesResources(context)
-                            .inNamespace("globex-gitops-" + user).load(inputStream).create();
+                            .inNamespace(argoApplicationNamespace + "-" + user).load(inputStream).create();
                     return new JsonObject().put("status", "ok")
                             .put("application", new JsonObject().put("deployed", true).put("deleting", false)
                             .put("status", newResource.get("status", "sync", "status") == null ? "" : newResource.get("status", "sync", "status"))
@@ -291,32 +302,22 @@ public class WorkshopDeployer {
                             .build();
 
                     GenericKubernetesResource resource = client.genericKubernetesResources(context)
-                            .inNamespace("globex-gitops-" + user).withName(application).get();
+                            .inNamespace(argoApplicationNamespace + "-" + user).withName(application).get();
                     if (resource == null) {
                         LOGGER.warn("Application '" + application + "' not found for user '" + user + "'");
                         return new JsonObject().put("status", "notchanged");
                     }
                     LOGGER.info("Undeploying application '" + application + "' for user '" + user + "'");
                     client.genericKubernetesResources(context)
-                            .inNamespace("globex-gitops-" + user).withName(application).delete();
-                    // delete namespaces
-                    Optional<Object> module = modules.stream().filter(o -> {
-                        JsonObject m = (JsonObject) o;
-                        return m.getString("applicationName").equals(application);
-                    }).findFirst();
-                    if (module.isEmpty()) {
-                        LOGGER.warn("Module for application '" + application + "' not found.");
-                    } else {
-                        JsonArray namespaces = ((JsonObject) module.get()).getJsonArray("namespaces");
-                        if (namespaces == null) {
-                            namespaces = new JsonArray();
-                        }
-                        namespaces.stream().map(o -> ((String)o).replaceAll("\\{\\{ __user }}", user))
-                                .forEach(namespaceName -> {
-                                    client.namespaces().withName(namespaceName).delete();
-                                    LOGGER.info("Namespace " + namespaceName + " deleted");
-                                });
-                    }
+                            .inNamespace(argoApplicationNamespace + "-" + user).withName(application).delete();
+
+                    // delete namespace asynchonously
+                    Instant timeLimit = Instant.now().plus( Duration.ofMillis(Long.parseLong(maxTimeToWaitStr)));
+                    Duration untilNextRun = Duration.ofMillis(Long.parseLong(intervalStr));
+                    CheckApplicationTask task = new CheckApplicationTask(application, argoApplicationNamespace + "-" + user, user, context,
+                            timeLimit, untilNextRun, client, executorService);
+                    executorService.schedule(task, 0, TimeUnit.SECONDS);
+
                     return new JsonObject().put("status", "ok")
                             .put("application", new JsonObject().put("deployed", true).put("deleting", true)
                             .put("status", "")
@@ -349,12 +350,84 @@ public class WorkshopDeployer {
                     .build();
 
             return client.genericKubernetesResources(context)
-                    .inNamespace("globex-gitops-" + user)
+                    .inNamespace(argoApplicationNamespace + "-" + user)
                     .list().getItems();
 
         } catch (Exception e) {
             LOGGER.error("Exception while listing Applications for user " + user, e);
             return new ArrayList<>();
+        }
+    }
+
+    private Optional<JsonObject> getModule(String application) {
+        return modules.stream().filter(o -> {
+            JsonObject m = (JsonObject) o;
+            return m.getString("applicationName").equals(application);
+        }).map(o -> (JsonObject)o).findFirst();
+    }
+
+    private void deleteNamespaces(String application, String user) {
+        Optional<JsonObject> module = getModule(application);
+        if (module.isEmpty()) {
+            LOGGER.warn("Module for application '" + application + "' not found.");
+        } else {
+            JsonArray namespaces = module.get().getJsonArray("namespaces");
+            if (namespaces == null) {
+                namespaces = new JsonArray();
+            }
+            namespaces.stream().map(o -> ((String)o).replaceAll("\\{\\{ __user }}", user))
+                    .forEach(namespaceName -> {
+                        client.namespaces().withName(namespaceName).delete();
+                        LOGGER.info("Namespace " + namespaceName + " deleted");
+                    });
+        }
+    }
+
+    public class CheckApplicationTask implements Runnable {
+
+        private final String application;
+
+        private final String namespace;
+
+        private final String user;
+
+        private final Instant timeLimit;
+
+        private final Duration untilNextRun;
+
+        private final ResourceDefinitionContext context;
+
+        private final KubernetesClient client;
+
+        private final ScheduledExecutorService executorService;
+
+        public CheckApplicationTask(String application, String namespace, String user, ResourceDefinitionContext context,
+                                    Instant timeLimit, Duration untilNextRun, KubernetesClient client,
+                                    ScheduledExecutorService executorService) {
+            this.application = application;
+            this.namespace = namespace;
+            this.user = user;
+            this.context = context;
+            this.timeLimit = timeLimit;
+            this.untilNextRun = untilNextRun;
+            this.client = client;
+            this.executorService = executorService;
+        }
+
+        @Override
+        public void run() {
+            if (Instant.now().isAfter(timeLimit)) {
+                LOGGER.warn("Application " + application + " was not deleted before timeout.");
+                return;
+            }
+            GenericKubernetesResource resource = client.genericKubernetesResources(context)
+                    .inNamespace(namespace).withName(application).get();
+            if (resource == null) {
+                LOGGER.info("Application " + application + " in namespace " + namespace + " deleted.");
+                WorkshopDeployer.this.deleteNamespaces(application, user);
+            } else {
+                this.executorService.schedule(this, this.untilNextRun.toSeconds(), TimeUnit.SECONDS);
+            }
         }
     }
 }
