@@ -44,12 +44,15 @@ public class WorkshopDeployer {
     
     private String bookBagNamespace;
 
+    private String userPassword;
+
     void onStart(@Observes StartupEvent ev) {
         LOGGER.info("Loading configmaps...");
         namespace = System.getenv("NAMESPACE");
         allowedModulesCount = System.getenv("ALLOWED_MODULES_COUNT");
         bookBagNamespace = System.getenv("BOOKBAG_NAMESPACE");
         openShiftDomain = System.getenv("OPENSHIFT_DOMAIN");
+        userPassword = System.getenv("USER_PASSWORD");
         if (namespace == null || namespace.isBlank()) {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
         }
@@ -57,10 +60,13 @@ public class WorkshopDeployer {
             throw new RuntimeException("Environment variable 'ALLOWED_MODULES_COUNT' for namespace is either not set or is NaN.");
         }
         if (bookBagNamespace == null ) {
-            throw new RuntimeException("Environment variable 'bookBagNamespace' for namespace is not set.");
+            throw new RuntimeException("Environment variable 'BOOKBAG_NAMESPACE' for namespace is not set.");
         }
         if (openShiftDomain == null ) {
-            throw new RuntimeException("Environment variable 'openShiftDomain' for namespace is not set.");
+            throw new RuntimeException("Environment variable 'OPENSHIFT_DOMAIN' for namespace is not set.");
+        }
+        if (userPassword == null ) {
+            throw new RuntimeException("Environment variable 'USER_PASSWORD' for namespace is not set.");
         }
         String configmap = System.getenv().getOrDefault("CONFIGMAP_MODULES", "workshop-modules");
         ConfigMap cmModules = client.configMaps().inNamespace(namespace).withName(configmap).get();
@@ -105,6 +111,7 @@ public class WorkshopDeployer {
                         module.put("description", jsonObject.getString("description"));
                         module.put("primaryTags", jsonObject.getJsonObject("tags").getJsonArray("primary"));
                         module.put("secondaryTags", jsonObject.getJsonObject("tags").getJsonArray("secondary"));
+                        module.put("isDefault", jsonObject.getBoolean("isDefault"));
                         module.put("application", jsonObject.getString("applicationName"));
 
                         Optional<GenericKubernetesResource> application = applications.stream()
@@ -144,7 +151,9 @@ public class WorkshopDeployer {
         JsonObject module = new JsonObject();
         module.put("ALLOWED_MODULES_COUNT", allowedModulesCount);
         module.put("BOOKBAG_URL", "https://" + bookBagNamespace  + "-" + user + "." + openShiftDomain + "/workshop");
+        module.put("OPENSHIFT_CONSOLE", "https://console-openshift-console." + openShiftDomain);
         module.put("USER", user);
+        module.put("PASSWORD", userPassword);
         
         
         return Uni.createFrom().voidItem().emitOn(Infrastructure.getDefaultWorkerPool())
