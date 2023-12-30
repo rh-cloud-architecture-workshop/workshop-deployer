@@ -8,7 +8,7 @@
   <div class="row">
 
     <div class="col-12">
-      <div class="card-body alert alert-light pb-2 pt-2">
+      <div class="card-body alert alert-light pb-2 pt-2" *ngIf="globalConfig">
         Here are your user access details to access this workshop. <strong>Username:</strong>&nbsp;&nbsp;{{ globalConfig.USER}} |
         <strong>Password:</strong>&nbsp;&nbsp;{{ globalConfig.PASSWORD}} |
         <strong>OpenShift console:</strong>&nbsp;&nbsp;
