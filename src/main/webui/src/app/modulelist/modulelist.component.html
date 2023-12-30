@@ -7,6 +7,17 @@
 <div class="container-fluid">
   <div class="row">
 
+    <div class="col-12">
+      <div class="card-body alert alert-light pb-2 pt-2">
+        Here are your user access details to access this workshop. <strong>Username:</strong>&nbsp;&nbsp;{{ globalConfig.USER}} |
+        <strong>Password:</strong>&nbsp;&nbsp;{{ globalConfig.PASSWORD}} |
+        <strong>OpenShift console:</strong>&nbsp;&nbsp;
+        <a href="https://console-openshift-console.{{ globalConfig.OPENSHIFT_DOMAIN}}" target="_blank">
+          https://console-openshift-console.{{ globalConfig.OPENSHIFT_DOMAIN}}
+        </a>
+      </div>
+    </div>
+
     <!--Left column with filters-->
     <div class="col-2">
       <div class="card" *ngIf="showFilterCard">

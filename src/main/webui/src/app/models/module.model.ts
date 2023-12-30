@@ -12,5 +12,6 @@ export class Module {
     deleting: boolean;
     status: string;
     health: string;
+    isDefault: boolean;
 }
 

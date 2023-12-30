@@ -28,7 +28,7 @@
           <a  href="{{globalConfig['BOOKBAG_URL']}}/{{module.application}}-intro" target="_application">Intro</a>&nbsp;
 
         </div>
-        <div class="col">
+        <div class="col" *ngIf="!module.isDefault" >
           <a href="{{globalConfig['BOOKBAG_URL']}}/{{module.application}}-instructions" target="_application">Instructions</a>&nbsp;
         </div>
         <div class="col">
@@ -36,14 +36,15 @@
             <button type="button" class="btn btn-sm btn-secondary btn-disabled" (click)="sendAlert('MAX_MODULES_DEPLOYED')"><i class="fa fa-plus-circle fa-lg"></i>&nbsp;Deploy &nbsp;</button>&nbsp;
             <i class="fa fa-question-circle text-warning" (click)="sendAlert('MAX_MODULES_DEPLOYED')" ></i>
           </div>
-          <div *ngIf="!module.deployed && !maxModulesReached" class=" float-end">
-            <button (click)="deployApplication(module.application)" type="button" class="btn btn-sm btn-secondary "
-              [disabled]="module.deleting"><i class="fa fa-plus-circle fa-lg"></i>&nbsp;Deploy</button>
-          </div>
-          <div *ngIf="module.deployed" class=" float-end">
-            <button (click)="undeployApplication(module.application)" type="button" class="btn btn-sm btn-secondary"
-              [disabled]="module.deleting"><i class="fa fa-minus-circle fa-lg"></i>&nbsp;&nbsp;Undeploy</button>
-
+          <div *ngIf="!module.isDefault" class=" float-end">
+            <div *ngIf="!module.deployed && !maxModulesReached" class=" float-end">
+              <button (click)="deployApplication(module.application)" type="button" class="btn btn-sm btn-secondary "
+                [disabled]="module.deleting"><i class="fa fa-plus-circle fa-lg"></i>&nbsp;Deploy</button>
+            </div>
+            <div *ngIf="module.deployed" class=" float-end">
+              <button (click)="undeployApplication(module.application)" type="button" class="btn btn-sm btn-secondary"
+                [disabled]="module.deleting"><i class="fa fa-minus-circle fa-lg"></i>&nbsp;&nbsp;Undeploy</button>
+            </div>
           </div>
         </div>
       </div>
