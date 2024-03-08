@@ -51,7 +51,9 @@ public class WorkshopDeployer {
 
     private String openShiftDomain;
     
-    private String bookBagNamespace;
+    private String showRoomHostPrefix;
+
+    private String showRoomPath;
 
     private String argoApplicationNamespace;
 
@@ -69,7 +71,8 @@ public class WorkshopDeployer {
         LOGGER.info("Loading configmaps...");
         namespace = System.getenv("NAMESPACE");
         allowedModulesCount = System.getenv().getOrDefault("ALLOWED_MODULES_COUNT","2");
-        bookBagNamespace = System.getenv("BOOKBAG_NAMESPACE");
+        showRoomHostPrefix = System.getenv("SHOWROOM_HOST_PREFIX");
+        showRoomPath = System.getenv("SHOWROOM_PATH");
         openShiftDomain = System.getenv("OPENSHIFT_DOMAIN");
         argoApplicationNamespace = System.getenv("ARGO_NAMESPACE_PREFIX");
         argoApplicationName = System.getenv().getOrDefault("ARGO_NAME_PREFIX", "globex-gitops");
@@ -82,16 +85,19 @@ public class WorkshopDeployer {
             throw new RuntimeException("Environment variable 'NAMESPACE' for namespace not set.");
         }
         if (allowedModulesCount == null || !allowedModulesCount.matches("-?\\d+")) {
-            throw new RuntimeException("Environment variable 'ALLOWED_MODULES_COUNT' for namespace is either not set or is NaN.");
+            throw new RuntimeException("Environment variable 'ALLOWED_MODULES_COUNT' is either not set or is NaN.");
         }
-        if (bookBagNamespace == null ) {
-            throw new RuntimeException("Environment variable 'BOOKBAG_NAMESPACE' for namespace is not set.");
+        if (showRoomHostPrefix == null ) {
+            throw new RuntimeException("Environment variable 'SHOWROOM_HOST_PREFIX' is not set.");
+        }
+        if (showRoomPath == null ) {
+            throw new RuntimeException("Environment variable 'SHOWROOM_PATH' is not set.");
         }
         if (openShiftDomain == null ) {
-            throw new RuntimeException("Environment variable 'OPENSHIFT_DOMAIN' for namespace is not set.");
+            throw new RuntimeException("Environment variable 'OPENSHIFT_DOMAIN' is not set.");
         }
         if (userPassword == null ) {
-            throw new RuntimeException("Environment variable 'USER_PASSWORD' for namespace is not set.");
+            throw new RuntimeException("Environment variable 'USER_PASSWORD' is not set.");
         }
         String configmap = System.getenv().getOrDefault("CONFIGMAP_MODULES", "workshop-modules");
         ConfigMap cmModules = client.configMaps().inNamespace(namespace).withName(configmap).get();
@@ -175,7 +181,7 @@ public class WorkshopDeployer {
         String user = getUser(headers);
         JsonObject module = new JsonObject();
         module.put("ALLOWED_MODULES_COUNT", allowedModulesCount);
-        module.put("BOOKBAG_URL", "https://" + bookBagNamespace  + "-" + user + "." + openShiftDomain + "/workshop");
+        module.put("SHOWROOM_URL", "https://" + showRoomHostPrefix  + "-" + user + "." + openShiftDomain + showRoomPath);
         module.put("USER", user);
         module.put("PASSWORD", userPassword);
         module.put("OPENSHIFT_DOMAIN", openShiftDomain);
